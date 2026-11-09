@@ -1,0 +1,42 @@
+name: Validate and Generate Report
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'data/tasks.csv'
+      - 'data/employees.csv'
+      - 'data/task_master.csv'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-and-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas openpyxl
+
+      - name: Validate data
+        run: python scripts/validate.py
+
+      - name: Generate report
+        if: github.event_name == 'push'
+        run: python scripts/generate_report.py
+
+      - name: Commit report
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/
+          git diff --staged --quiet || git commit -m "Auto-update report"
+          git push
